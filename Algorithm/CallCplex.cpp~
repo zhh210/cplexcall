@@ -1,0 +1,81 @@
+/*
+ * CallCplex.cpp
+ *
+ *  Created on: Feb 27, 2012
+ *      Author: zheng
+ */
+
+// Call cplex directly to solve the problem
+
+#include <iostream>
+#include "CallCplex.h"
+#include "cplex.h"
+
+ILOSTLBEGIN
+
+typedef IloArray<IloNumArray>    NumMatrix;
+typedef IloArray<IloNumVarArray> NumVarMatrix;
+
+void CallCplex(BoundQp* Bqp){
+	IloEnv env;
+	int size = Bqp.size;
+	IloModel model(env);
+
+	// Extract data from H
+	NumMatrix H(env, size);
+	for(int i=0;i<size;++i)
+		H[i] = IloNumArray(env);
+		for(int j=0;j<size;++j)
+			H[i].add((*Bqp.getH())(i,j));
+
+	// Extract data from c,l,u
+	IloNumArray c(env,size);
+	IloNumArray l(env,size);
+	IloNumArray u(env,size);
+	for(int i=0;i<size;++i){
+		c.add((*Bqp.getc())[i]);
+		l.add((*Bqp.getl())[i]);
+		u.add((*Bqp.getu())[i]);
+	}
+
+	// Define variables
+	IloNumVarArray x(env,size);
+
+	// Formulate the constraints
+	for(IloInt i=0;i<size;++i)
+		model.add(l[i]<=x[i]<=u[i]);
+
+	// Formulate objective
+	IloExpr obj(env);
+	for(IloInt i=0;i<size;++i)
+		obj+=c[i]*x[i];
+	for(IloInt i=0;i<size;++i)
+		for(IloInt j=0;j<size;++j)
+			obj+=0.5*x[i]*H[i][j]*x[j];
+	obj.end();
+
+	// Formulate the model
+	model.add(IloMinimize(env,obj));
+	IloCplex cplex(env);
+
+
+	// Call solver to solve the problem
+	try{
+		cplex.solve();
+
+	}
+	catch (IloException& e) {
+	      cerr << "ERROR: " << e.getMessage() << endl;
+	   }
+
+	// Print out optimal value and solution
+	env.out() <<" Objvalue: "<<endl;
+	env.out() << cplex.getObjValue()<<endl;
+	env.out() <<" Solutions: "<<endl;
+	for(IloInt i=0;i<size;++i)
+		env.out() << cplex.getValue(x[i])<<'\t';
+	env.out() <<endl;
+
+	env.end();
+	return 0;
+};

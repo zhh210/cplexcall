@@ -1,0 +1,15 @@
+/*
+ * CallCplex.h
+ *
+ *  Created on: Feb 27, 2012
+ *      Author: zheng
+ */
+
+
+// Call Cplex to solve the problem
+
+#ifndef CALLCPLEX_H_
+#define CALLCPLEX_H_
+void CallCplex(BoundQp* bqp);
+
+#endif /* CALLCPLEX_H_ */
